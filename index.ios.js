@@ -492,7 +492,7 @@ var MessageContainer = React.createClass({
   render: function() {
     var messageList = this.props.messages.map(function(message) {
       return (
-        <View style={[styles.messageEntry]}>
+        <View key={Math.random()} style={[styles.messageEntry]}>
           <View style={{flexDirection:'row', flex: 1}}>
             <Text style={{flex: 5, fontStyle: 'italic'}}>
               {message.name}
@@ -1323,33 +1323,36 @@ var BillContainer = React.createClass({
 
   render: function() {
     var billList = this.props.bills.map(function(bill) {
+      console.log('BILL', bill)
       var dueDate = bill.dueDate.toString().split(' ').slice(0, 4).join(' ')
       return (
-        <View style={[styles.choreEntry]}>
-        <View style={[styles.choreData]}>
-          <Text style={{padding: 2, fontWeight: 'bold'}}>
-            Due {bill.dueDate}
-          </Text>
-        <Text style={{padding: 2, fontStyle: 'italic'}}>
-          {bill.billName}: ${bill.amount}
-        </Text>
-        </View>
-        <View style={[styles.doneButtonCont]}>
-          <View style={[styles.doneButton]}>
-            <Text style={{color: 'white', marginTop: 0}} >
-              Pay
+        <View key={Math.random()} style={[styles.choreEntry]}>
+          <View style={[styles.choreData]}>
+            <Text style={{padding: 2, fontWeight: 'bold'}}>
+              Due {bill.dueDate.slice(0, 10)}
             </Text>
+          <Text style={{padding: 2, fontStyle: 'italic'}}>
+            {bill.billName}: ${bill.amount}
+          </Text>
+          </View>
+          <View style={[styles.doneButtonCont]}>
+            <View style={[styles.doneButton]}>
+              <Text style={{color: 'white', marginTop: 0}} >
+                Pay
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
       )
     })
     return (
       <View style={[styles.paymentContainer]}>
         <Text style={styles.viewTitle}>Bills</Text>
-        <View style={[styles.messageContainer]}>
-          {billList}
-        </View>
+        <ScrollView>
+          <View style={[styles.messageContainer]}>
+            {billList}
+          </View>
+        </ScrollView>
       </View>
     )
   }
@@ -1381,21 +1384,23 @@ var PaymentContainer = React.createClass({
   render: function(){
     var paymentList = this.props.payments.map(function(payment) {
       return (  
-        <View style={[styles.messageEntry]}>
+        <View key={Math.random()} style={[styles.messageEntry]}>
           <Text style={{padding: 2, fontWeight: 'bold'}}>
             {payment.ower} owes you ${payment.amount} for {payment.billName}
           </Text>
           <Text style={{padding: 2}}>
-            Due {payment.dueDate}
+            Due {payment.dueDate.slice(0,10)}
           </Text>
         </View>)
     })
     return (
       <View style={[styles.paymentContainer]}>
         <Text style={styles.viewTitle}>Payments</Text>
-        <View style={[styles.messageContainer]}>
-          {paymentList}
-        </View>
+        <ScrollView style={{marginBottom: 10}}>
+          <View style={[styles.messageContainer]}>
+            {paymentList}
+          </View>
+        </ScrollView>
       </View>
     )
   }
