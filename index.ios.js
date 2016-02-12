@@ -23,6 +23,9 @@ import React, {
 } from 'react-native';
 
 // import Modal from 'react-native-modal';
+//import io from 'socket.io'
+
+//window.navigator.userAgent = 'react-native';
 
 import DropDown, {
   Select,
@@ -35,6 +38,12 @@ import DropDown, {
 import {createStore} from 'redux';
 
 ////////////////// DUMMY GLOBAL VARS //////////////////////////
+
+window.navigator.userAgent = "react-native";
+
+var io = require('socket.io-client/socket.io');
+var socket = io('http://obie.herokuapp.com', {jsonp: false});
+
 
 var ScrollableTabView = require('react-native-scrollable-tab-view');
 
@@ -112,35 +121,127 @@ var App = React.createClass({
       //eventually should all be replaced by empty arrs,
       //they will be overwritten by fetch calls 
       chores: chores,
-      messages: messages,
       users: users,
-      //below brough in from web App component
+      messages: [],
+      bills: [],
+      paymentsOwed: [], 
       view: 'Finances',
       houseCode: '',
       houseName: '',
       isLandlord: false,
       initialLoad: true,
-      landlordHouses: []
+      landlordHouses: [],
+      userId: '',
+      houseId: '',
+      email: ''
     }
   },
 
-  //call to get the session
-  componentDidMount: function() {
-    this.getSession();
-  },
-
-  getUsers: function() {
-    fetch(process.env.Base_URL + '/', {
+  loadMessages: function(houseId) {
+    var context = this; 
+    fetch('http://localhost:8080/api/mobile/messages/' + houseId, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'token': AsyncStorage.getItem('obie')
+        //'token': AsyncStorage.getItem('obie')
       }
     })
-    .then(function(users) {
+    .then(function(response) {
+      response.json().then(function(data) {
+        //console.log('RECEIVED THE DAAT', data)
+        context.setState({messages: data})
+      })
+    })
+  },
+
+  loadBills: function(userId) {
+    var context = this; 
+    fetch('http://localhost:8080/api/mobile/bills/' + userId, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        //'token': AsyncStorage.getItem('obie')
+      }
+    })
+    .then(function(response) {
+      response.json().then(function(data) {
+        //console.log('RECEIVED THE DAAT', data)
+        context.setState({bills: data})
+      })
+    })
+  },
+
+//load all payments made to the user
+//LOCATION: Finance Component --> Finance Container
+loadPayments: function(userId) {
+  var context = this; 
+  fetch('http://localhost:8080/api/mobile/payments/' + userId, {
+    method: 'GET',
+    headers: {
+      'Accept': 'application/json',
+      'Content-Type': 'application/json',
+      //'token': AsyncStorage.getItem('obie')
+    }
+  })
+  .then(function(response) {
+    console.log('RESPONSE', response)
+    response.json().then(function(data) {
+      console.log('RECEIVED THE DAAT', data)
+        context.setState({paymentsOwed: data})
+      })
+  })
+},
+
+  getHouseId: function(email) {
+    var context = this; 
+    fetch('http://localhost:8080/api/mobile/users/' + email, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(function(response) {
+       response.json().then(function(data) {
+        context.setState({houseId: data[0].HouseId, userId: data[0].id})
+        context.loadMessages(context.state.houseId); 
+        context.loadBills(context.state.userId);
+        context.loadPayments(context.state.userId);
+        context.getUsers(context.state.houseId);
+      })
+    })
+  },
+
+  //call to get the session
+  componentDidMount: function() {
+    //this.getSession();
+    var context = this; 
+    AsyncStorage.getItem('email')
+      .then(function(email) {
+        context.setState({email: email})
+        context.getHouseId(context.state.email);
+      });
+  },
+
+  getUsers: function(houseId) {
+    console.log('HOUSE ID', houseId)
+    fetch('http://localhost:8080/api/mobile/users/' + houseId, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+        //'token': AsyncStorage.getItem('obie')
+      }
+    })
+    .then(function(response) {
+      console.log('USERS COMING BACK', response)
       //update state users array with response
-      this.setState({users: users});
+      //this.setState({users: users});
+    })
+    .catch(function(err) {
+      console.log(err);
     })
   },
 
@@ -150,7 +251,7 @@ var App = React.createClass({
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'token': AsyncStorage.getItem('obie')
+        //'token': AsyncStorage.getItem('obie')
       }
     })
     .then(function(url) {
@@ -234,9 +335,9 @@ var App = React.createClass({
         {/*<Navbar />
         <MessageContainer messages={this.state.messages} />*/}
         <ScrollableTabView>
-          <MessageContainer messages={this.state.messages} tabLabel="Messages" />
-          <FinanceContainer tabLabel="Finance"/>
-          <ChoreContainer chores={this.state.chores} tabLabel="Chores" />
+          <MessageContainer loadMessages={this.loadMessages} messages={this.state.messages} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Messages"/>
+          <FinanceContainer loadBills={this.loadBills} payments={this.state.paymentsOwed} bills={this.state.bills} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Finance"/>
+          <ChoreContainer email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Chores" />
         </ScrollableTabView>
       </View>
     )
@@ -296,61 +397,52 @@ var MessageContainer = React.createClass({
     //var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
     return {
       email: '',
-      messages: messages,
-      showKeyboard: false,
-      userId: '',
-      houseId: ''
+      messages: [],
+      showKeyboard: false
     };
   },
 
-  componentDidMount: function () {
-    var context = this; 
-    AsyncStorage.getItem('email')
-      .then(function(email) {
-        context.setState({email: email})
-        context.getHouseId(context.state.email);
-      });
-    //loads messages, taken from web app message container
-    //socket.on('message', context.loadMessages);
+  componentDidMount: function() {
+    var context = this;
+    // setInterval(function() {context.props.loadMessages(context.props.houseId)}, 500);
+    socket.on('message', function() {context.props.loadMessages(context.props.houseId)});
   },
 
-  getHouseId: function(email) {
-    var context = this; 
-    fetch('http://localhost:8080/api/mobile/users/' + email, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json'
-      }
-    })
-    .then(function(response) {
-       response.json().then(function(data) {
-        context.setState({houseId: data[0].HouseId, userId: data[0].id})
-        context.loadMessages(context.state.houseId); 
-      })
-    })
-  },
+  // componentDidMount: function () {
+  //   this.setState({messages: this.props.messages})
+  //   //this.loadMessages(this.props.houseId)
+  //   // var context = this; 
+  //   // AsyncStorage.getItem('email')
+  //   //   .then(function(email) {
+  //   //     context.setState({email: email})
+  //   //     context.getHouseId(context.state.email);
+  //   //   });
+  //   //loads messages, taken from web app message container
+  //   //socket.on('message', context.loadMessages);
+  // },
 
-  loadMessages: function(houseId) {
-    var context = this; 
-    fetch('http://localhost:8080/api/mobile/messages/' + houseId, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-        //'token': AsyncStorage.getItem('obie')
-      }
-    })
-    .then(function(response) {
-      response.json().then(function(data) {
-        context.setState({messages: data})
-      })
-    })
-  },
+  // getHouseId: function(email) {
+  //   var context = this; 
+  //   fetch('http://localhost:8080/api/mobile/users/' + email, {
+  //     method: 'GET',
+  //     headers: {
+  //       'Accept': 'application/json',
+  //       'Content-Type': 'application/json'
+  //     }
+  //   })
+  //   .then(function(response) {
+  //      response.json().then(function(data) {
+  //       console.log('DAAT', data)
+  //       context.setState({houseId: data[0].HouseId, userId: data[0].id})
+  //       context.loadMessages(context.state.houseId); 
+  //     })
+  //   })
+  // },
 
   submitMessage: function(message) {
     var context = this;  
-    fetch(process.env.Base_URL + '/messages', {
+    console.log('MESSAGE', message)
+    fetch('http://localhost:8080/api/mobile/messages', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -359,8 +451,9 @@ var MessageContainer = React.createClass({
       },
       body: JSON.stringify(message)
     })
-    .then(function(response) {
-      // context.
+    .then(function() {
+      socket.emit('message', {})
+      context.props.loadMessages(context.props.houseId);
     })
   },
 
@@ -385,7 +478,7 @@ var MessageContainer = React.createClass({
           <Text style={{flex: 5, fontStyle: 'italic'}}>
             {rowData.name}
           </Text>
-          <Text style={{fontStyle: 'italic'}}>
+          <Text style={{fontStyle: 'italic', fontSize: 8}}>
             {rowData.date}
           </Text>
         </View>
@@ -397,14 +490,14 @@ var MessageContainer = React.createClass({
   },
 
   render: function() {
-    var messageList = this.state.messages.map(function(message) {
+    var messageList = this.props.messages.map(function(message) {
       return (
-        <View style={[styles.messageEntry]}>
+        <View key={Math.random()} style={[styles.messageEntry]}>
           <View style={{flexDirection:'row', flex: 1}}>
             <Text style={{flex: 5, fontStyle: 'italic'}}>
-              {message.userId}
+              {message.name}
             </Text>
-            <Text style={{fontStyle: 'italic'}}>
+            <Text style={{fontStyle: 'italic', fontSize: 12}}>
               {message.time}
             </Text>
           </View>
@@ -417,10 +510,12 @@ var MessageContainer = React.createClass({
     return (
       <View style={[styles.messageContainer]}>
         <Text style={styles.viewTitle}>Messages</Text>
-        <View style={[styles.messageContainer]}>
-          {messageList}
-        </View>
-        <MessageForm sendMessage={this.sendMessage} />
+        <ScrollView>
+          <View style={[styles.messageContainer]}>
+            {messageList}
+          </View>
+        </ScrollView>
+        <MessageForm houseId={this.props.houseId} user={this.props.userId} submitMessage={this.submitMessage} />
       </View>
     )
   }
@@ -438,13 +533,13 @@ var MessageForm = React.createClass({
     this.toggleKeyboardFalse();
     var messageObject = {
       //eventually need to replace with userId from token
-      name: 'Joey Holland', 
+      userId: this.props.user, 
       //this is good, updated by user input
       text: this.state.text,
-      date: new Date().toString().split(' ').slice(0, 4).join(' ')
+      houseId: this.props.houseId
     }
     this.setState({text: ''});
-    this.props.sendMessage(messageObject);
+    this.props.submitMessage(messageObject);
     //need to consider how to clear user input field text
     //after submission 
   },
@@ -554,15 +649,20 @@ var DatePickerExample = React.createClass({
 
   
   onDateChange: function(date) {
-    this.setState({date: date});
-    gDate = this.state.date;  
+    this.setState({date: date}); 
   },
+
   onTimezoneChange: function(event) {
     var offset = parseInt(event.nativeEvent.text, 10);
     if (isNaN(offset)) {
       return;
     }
     this.setState({timeZoneOffsetInHours: offset});
+  },
+
+  updateDate: function(date) {
+    this.setState({date: date}); 
+    this.props.setBillDate(this.state.date); 
   },
 
   render: function() {
@@ -573,7 +673,7 @@ var DatePickerExample = React.createClass({
             date={this.state.date}
             mode="datetime"
             timeZoneOffsetInMinutes={this.state.timeZoneOffsetInHours * 60}
-            onDateChange={this.onDateChange}
+            onDateChange={this.updateDate}
             minuteInterval={30}
             style={[{height: 500}]}
           />
@@ -1104,9 +1204,11 @@ var ChoreContainer = React.createClass({
     return (
       <View style={[styles.messageContainer]}>
         <Text style={styles.viewTitle}>Chores</Text>
-        <View style={[styles.messageContainer]}>
-          {choreList}
-        </View>
+        <ScrollView>
+          <View style={[styles.messageContainer]}>
+            {choreList}
+          </View>
+        </ScrollView>
         {this.renderShowAddButton()}
         {this.renderForm()}
       </View>
@@ -1185,8 +1287,14 @@ var BillContainer = React.createClass({
     var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
     return {
       bills: bills,
-      dataSource: ds.cloneWithRows(bills)
+      dataSource: ds.cloneWithRows(this.props.bills)
     }
+  },
+
+  componentDidMount: function() {
+    var context = this;
+    // setInterval(function() {context.props.loadMessages(context.props.houseId)}, 500);
+    socket.on('bill', function() {context.props.loadBills(context.props.userId)})
   },
 
   renderBillEntry: function(rowData){
@@ -1194,7 +1302,7 @@ var BillContainer = React.createClass({
       <View style={[styles.choreEntry]}>
         <View style={[styles.choreData]}>
           <Text style={{padding: 2, fontWeight: 'bold'}}>
-            Due {rowData.date}
+            Due {rowData.dueDate}
           </Text>
         <Text style={{padding: 2, fontStyle: 'italic'}}>
           {rowData.name}: ${rowData.total}
@@ -1214,13 +1322,37 @@ var BillContainer = React.createClass({
   },
 
   render: function() {
+    var billList = this.props.bills.map(function(bill) {
+      console.log('BILL', bill)
+      var dueDate = bill.dueDate.toString().split(' ').slice(0, 4).join(' ')
+      return (
+        <View key={Math.random()} style={[styles.choreEntry]}>
+          <View style={[styles.choreData]}>
+            <Text style={{padding: 2, fontWeight: 'bold'}}>
+              Due {bill.dueDate.slice(0, 10)}
+            </Text>
+          <Text style={{padding: 2, fontStyle: 'italic'}}>
+            {bill.billName}: ${bill.amount}
+          </Text>
+          </View>
+          <View style={[styles.doneButtonCont]}>
+            <View style={[styles.doneButton]}>
+              <Text style={{color: 'white', marginTop: 0}} >
+                Pay
+              </Text>
+            </View>
+          </View>
+        </View>
+      )
+    })
     return (
       <View style={[styles.paymentContainer]}>
         <Text style={styles.viewTitle}>Bills</Text>
-        <ListView
-          dataSource={this.state.dataSource}
-          renderRow={this.renderBillEntry}
-        />
+        <ScrollView>
+          <View style={[styles.messageContainer]}>
+            {billList}
+          </View>
+        </ScrollView>
       </View>
     )
   }
@@ -1250,13 +1382,25 @@ var PaymentContainer = React.createClass({
   },
 
   render: function(){
+    var paymentList = this.props.payments.map(function(payment) {
+      return (  
+        <View key={Math.random()} style={[styles.messageEntry]}>
+          <Text style={{padding: 2, fontWeight: 'bold'}}>
+            {payment.ower} owes you ${payment.amount} for {payment.billName}
+          </Text>
+          <Text style={{padding: 2}}>
+            Due {payment.dueDate.slice(0,10)}
+          </Text>
+        </View>)
+    })
     return (
       <View style={[styles.paymentContainer]}>
         <Text style={styles.viewTitle}>Payments</Text>
-        <ListView
-        dataSource={this.state.dataSource}
-        renderRow={this.renderPaymentEntry}
-        />
+        <ScrollView style={{marginBottom: 10}}>
+          <View style={[styles.messageContainer]}>
+            {paymentList}
+          </View>
+        </ScrollView>
       </View>
     )
   }
@@ -1317,7 +1461,7 @@ var FinanceContainer = React.createClass({
  renderPayments: function() {
   if(this.state.showPayments){
     return (
-      <PaymentContainer/>
+      <PaymentContainer payments={this.props.payments}/>
     )
   }
  },
@@ -1326,7 +1470,7 @@ var FinanceContainer = React.createClass({
  renderBills: function() {
   if(this.state.showBills) {
     return (
-    <BillContainer/>
+    <BillContainer loadBills={this.props.loadBills} userId={this.props.userId} bills={this.props.bills}/>
     )
   }
  },
@@ -1370,10 +1514,15 @@ var CreateBill = React.createClass({
       total:'',
       date: gDate,
       bills: bills,
+      billDate: '',
       showDate: false,
       showCustomSplit: false,
       splitEvenly: false
     }
+  },
+
+  setBillDate: function(billDate) {
+    this.setState({billDate: billDate});
   },
 
   toggleDate: function() {
@@ -1382,7 +1531,7 @@ var CreateBill = React.createClass({
 
   renderDate: function() {
     if(this.state.showDate) {
-      return <DatePickerExample toggleClose={this.toggleClose}/>
+      return <DatePickerExample setBillDate={this.setBillDate} toggleClose={this.toggleClose}/>
     }
   },
 
@@ -1514,6 +1663,7 @@ var CreateBill = React.createClass({
   },
 
   render: function() {
+    console.log('SET BILL DATE', this.state.billDate);
     return (
       <View>
         <View style={{paddingTop: 10}}>{this.renderDate()}</View>
