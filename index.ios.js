@@ -30,7 +30,7 @@ import DropDown, {
   OptionList,
   updatePosition
 } from 'react-native-dropdown';
-  
+
 
 import {createStore} from 'redux';
 
@@ -41,7 +41,7 @@ var ScrollableTabView = require('react-native-scrollable-tab-view');
 var messages = []
 // var messages = [];
 var chores = [
-  //{category: 'kitchen', name: 'Joey', choreName: 'eat the cheese'}, 
+  //{category: 'kitchen', name: 'Joey', choreName: 'eat the cheese'},
   //{category: 'Bathroom', name: 'Justin', choreName: 'buy new stall for HR'}
 ]
 
@@ -58,7 +58,7 @@ var payments = [{username: 'lyly', payee: 'Nick',total: 200, name: 'rent', date:
 var billSplit = [];
 
 
-var gDate; 
+var gDate;
 var gUser;
 var gCategory;
 
@@ -88,8 +88,7 @@ roster/landlord views/user image/house code appear?
 
 var App = React.createClass({
   testConnection: function() {
-    console.log('testing connection'); 
-    fetch('http://localhost:8080/dummy', {
+    fetch('http://localhost:8080/api/mobile', {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
@@ -99,18 +98,21 @@ var App = React.createClass({
     })
     .then(function(data) {
       //update state users array with response
-      console.log('got data', data); 
+      console.log('got data', data);
+    })
+    .then(function(responseData){
+      console.log(responseData)
     })
     .catch(function(err) {
       console.log(err);
     })
-  }, 
+  },
 
   getInitialState: function() {
-    this.testConnection(); 
+    this.testConnection();
     return {
       //eventually should all be replaced by empty arrs,
-      //they will be overwritten by fetch calls 
+      //they will be overwritten by fetch calls
       chores: chores,
       messages: messages,
       users: users,
@@ -207,8 +209,8 @@ var App = React.createClass({
     .then(function(code) {
       AsyncStorage.removeItem('obie')
       .then(function() {
-        //may need to be adjusted, not sure exactly what 
-        //this does. 
+        //may need to be adjusted, not sure exactly what
+        //this does.
         window.location.href="/registration";
       });
     })
@@ -285,10 +287,10 @@ think about adding date to message entries
 
 when a user submits a message, the user right now is hard
 coded in to be "justin" but it should be the userId pulled
-from the token 
+from the token
 
-clear user input text field on message submission 
-*/ 
+clear user input text field on message submission
+*/
 
 var MessageContainer = React.createClass({
   getInitialState: function() {
@@ -304,7 +306,7 @@ var MessageContainer = React.createClass({
   },
 
   componentDidMount: function () {
-    var context = this; 
+    var context = this;
     AsyncStorage.getItem('email')
       .then(function(email) {
         context.setState({email: email})
@@ -315,7 +317,7 @@ var MessageContainer = React.createClass({
   },
 
   getHouseId: function(email) {
-    var context = this; 
+    var context = this;
     fetch('http://localhost:8080/api/mobile/users/' + email, {
       method: 'GET',
       headers: {
@@ -326,13 +328,13 @@ var MessageContainer = React.createClass({
     .then(function(response) {
        response.json().then(function(data) {
         context.setState({houseId: data[0].HouseId, userId: data[0].id})
-        context.loadMessages(context.state.houseId); 
+        context.loadMessages(context.state.houseId);
       })
     })
   },
 
   loadMessages: function(houseId) {
-    var context = this; 
+    var context = this;
     fetch('http://localhost:8080/api/mobile/messages/' + houseId, {
       method: 'GET',
       headers: {
@@ -349,7 +351,7 @@ var MessageContainer = React.createClass({
   },
 
   submitMessage: function(message) {
-    var context = this;  
+    var context = this;
     fetch(process.env.Base_URL + '/messages', {
       method: 'POST',
       headers: {
@@ -365,7 +367,7 @@ var MessageContainer = React.createClass({
   },
 
   //need to remove when back end is hooked up. this is just
-  //to update the dummy array. 
+  //to update the dummy array.
   sendMessage: function(messageObj) {
     this.state.messages.push(messageObj);
     this.setState({
@@ -377,8 +379,8 @@ var MessageContainer = React.createClass({
     })
   },
 
-  //consider adding date to the message entry 
-  renderMessageEntry: function(rowData) { 
+  //consider adding date to the message entry
+  renderMessageEntry: function(rowData) {
     return (
       <View style={[styles.messageEntry]}>
         <View style={{flexDirection:'row', flex: 1}}>
@@ -438,7 +440,7 @@ var MessageForm = React.createClass({
     this.toggleKeyboardFalse();
     var messageObject = {
       //eventually need to replace with userId from token
-      name: 'Joey Holland', 
+      name: 'Joey Holland',
       //this is good, updated by user input
       text: this.state.text,
       date: new Date().toString().split(' ').slice(0, 4).join(' ')
@@ -446,7 +448,7 @@ var MessageForm = React.createClass({
     this.setState({text: ''});
     this.props.sendMessage(messageObject);
     //need to consider how to clear user input field text
-    //after submission 
+    //after submission
   },
 
   // sendMessageButton: function() {
@@ -464,7 +466,7 @@ var MessageForm = React.createClass({
     sendMessageButton: function() {
       return (<Text style={{padding: 2, color: 'black', fontSize: 18, marginRight: 30}}
         onPress={this.addMessage}>
-        Send 
+        Send
       </Text>)
     },
 
@@ -488,7 +490,7 @@ var MessageForm = React.createClass({
       <View style={[styles.formTest]}>
         <View style={{flexDirection: 'row', paddingBottom: 25}}>
           <View style={{flex: 5}}>
-            <TextInput 
+            <TextInput
               placeholder='Enter message...'
               onFocus={this.toggleKeyboardTrue}
               onChangeText={(text) => this.setState({text})}
@@ -514,20 +516,20 @@ DatePickerExample, UserDrop, and CategoryDrop are the 3
 components that render conditionally in our form's makeshift
 navbar. need to make sure of a few things:
   -are they styled properly? right now they're rendering
-  in a way so that they take over the page when clicked. 
-  will this translate to all phone layouts and does this 
-  look ok? 
+  in a way so that they take over the page when clicked.
+  will this translate to all phone layouts and does this
+  look ok?
 
   -instead of normal input fields that can be set as refs,
-  we have distinct components that are providing us with 
+  we have distinct components that are providing us with
   our choreform data. therefore we can't set simple refs
   like we usually would for the user input. the data is set
-  in the individual dropdown/datepicker components, and 
+  in the individual dropdown/datepicker components, and
   would need to somehow be passed back up to the choreform.
   right now i have global variables that update the dropdown/
   date selection upon user interaction, and the submit chore
   method object and the choreform state reference these. need
-  to determine if this is ok/best practice and if not how to 
+  to determine if this is ok/best practice and if not how to
   resolve it
 
   -rowdata listview set up is distincly different from dealin
@@ -535,7 +537,7 @@ navbar. need to make sure of a few things:
   can be updated. have the updatestatus call hooked up to that
   button but need to figure out how to delete that particular
   row from the listview properly and how to pass the request the
-  proper chore id. 
+  proper chore id.
 */
 var DatePickerExample = React.createClass({
   getDefaultProps: function () {
@@ -552,10 +554,10 @@ var DatePickerExample = React.createClass({
     };
   },
 
-  
+
   onDateChange: function(date) {
     this.setState({date: date});
-    gDate = this.state.date;  
+    gDate = this.state.date;
   },
   onTimezoneChange: function(event) {
     var offset = parseInt(event.nativeEvent.text, 10);
@@ -578,7 +580,7 @@ var DatePickerExample = React.createClass({
             style={[{height: 500}]}
           />
         </View>
-        <View 
+        <View
           style={{justifyContent: 'flex-end', alignItems: 'center', marginBottom: 30}}
           >
           <Text onPress={this.props.toggleClose}>Close</Text>
@@ -598,28 +600,26 @@ var UserDrop = React.createClass({
   componentDidMount: function() {
     updatePosition(this.refs['SELECT1']);
     updatePosition(this.refs['OPTIONLIST']);
-  }, 
+  },
 
   _getOptionList: function() {
     return this.refs['OPTIONLIST'];
-  }, 
+  },
 
   user: function(user) {
     this.setState({
       user: user
     });
-    gUser = user; 
+    gUser = user;
   },
 
   render: function() {
     var names = users.map(function(user) {
-      console.log('USERS in names', users)
       return user;
     })
     var userList = names.map(function(user) {
       return <Option>{user}</Option>
     })
-    console.log('USER DROP', this)
     return (
       <View>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', height: 500}}>
@@ -635,7 +635,7 @@ var UserDrop = React.createClass({
           <Text>Selected User: {this.state.user}</Text>
           <OptionList ref="OPTIONLIST"/>
         </View>
-        <View 
+        <View
           style={{justifyContent: 'flex-end', alignItems: 'center', marginBottom: 30}}
           >
           <Text onPress={this.props.toggleClose}>Close</Text>
@@ -656,18 +656,18 @@ var CategoryDrop = React.createClass({
   componentDidMount: function() {
     updatePosition(this.refs['SELECT2']);
     updatePosition(this.refs['OPTIONLIST']);
-  }, 
+  },
 
   _getOptionList: function() {
     return this.refs['OPTIONLIST'];
-  }, 
+  },
 
   category: function(category) {
     this.setState({
       category: category
     });
     gCategory = category
-  }, 
+  },
 
   render: function() {
     return (
@@ -690,7 +690,7 @@ var CategoryDrop = React.createClass({
           <Text>Selected Category: {this.state.category}</Text>
           <OptionList ref="OPTIONLIST"/>
         </View>
-        <View 
+        <View
           style={{justifyContent: 'flex-end', alignItems: 'center', marginBottom: 30}}
           >
           <Text onPress={this.props.toggleClose}>Close</Text>
@@ -700,44 +700,6 @@ var CategoryDrop = React.createClass({
   }
 });
 
-// var FinanceContainer = React.createClass({
-//   getInitialState: function() {
-//     showBills: true,
-//     showPayments: false,
-//     showCreate: false
-//   },
-
-//   togglePayments: function() {
-//     if(this.state.showBills) {
-//       this.setState({showBills: !this.state.showBills})
-//     } else if ()
-//     this.setState({showPayments: !this.state.showPayments})
-//   },
-
-//   renderPayments: function() {
-//     if(this.state.showPayments) {
-//       return <PaymentContainer />
-//     }
-//   },
-
-//   render: function() {
-//     //nav bar messages, finance, and chores,
-//     //Finance
-//     //Big empty space that will hold bills, payments or form
-//     {this.renderPayments()}
-//     {this.renderForm()}
-//     //buttons to dictate what goes into empty space 
-//     <TouchableHighlight onPress={this.togglePayments}> 
-//       <Text>Payment</Text>
-//     </TouchableHighlight>
-//   }
-// })
-
-// var PaymentContainer = React.createClass({
-//   render: function() {
-//     <Text>This is the Payment container</Text>
-//   }
-// });
 
 var ChoreForm = React.createClass({
   getInitialState: function() {
@@ -750,7 +712,7 @@ var ChoreForm = React.createClass({
       date: '',
       chores: chores,
       showStatus: false,
-      showDate: false, 
+      showDate: false,
       showUser: false,
       showCategory: false,
       showClose: false,
@@ -847,26 +809,27 @@ var ChoreForm = React.createClass({
     this.setState({showKeyboard: !this.state.showKeyboard})
   },
 
-  addChore: function() {
+
+  addChore: function(houseId) {
     var choreObject = {
       name: gUser,
       category: gCategory,
-      choreName: this.state.choreName, 
+      choreName: this.state.choreName,
       date: gDate.toString().split(' ').slice(0, 4).join(' '),
       completed: false
-    }
+    };
+
     this.props.sendChore(choreObject);
   },
 
   sendChoreButton: function() {
     return <Text style={{padding: 2, color: 'black', fontSize: 18, marginRight: 30}}
         onPress={this.addChore}>
-        Post 
+        Post
       </Text>
   },
-  
+
   render: function() {
-    console.log('CHORE FORM STATE', this);
     return (
       <View style={{paddingTop: 10}}>
         {this.renderUser()}
@@ -903,7 +866,7 @@ var ChoreForm = React.createClass({
     //   <View style={[styles.formTest]}>
     //     <View style={{flexDirection: 'row', paddingBottom: 25, paddingLeft: 15}}>
     //       <View style={{flex: 5}}>
-    //         <TextInput 
+    //         <TextInput
     //           onFocus={this.toggleKeyboard}
     //           onChangeText={(text) => this.setState({text})}
     //           value={this.state.text}
@@ -924,98 +887,108 @@ var ChoreContainer = React.createClass({
   getInitialState: function() {
     var ds = new ListView.DataSource({rowHasChanged: (r1, r2) => r1 !== r2});
     return {
-      //will be replaced by loadChores()
-      chores: [],
-      dataSource: ds.cloneWithRows(chores),
+      chores: chores,
+      // dataSource: ds.cloneWithRows(chores),
       //will be replaced by getUsers() called on compdidmount
-      users: [],
+      users: users,
+      userId: '',
+      houseId: '',
       showAddButton: true
     };
   },
 
+  componentDidMount: function () {
+  var context = this;
+    AsyncStorage.getItem('email')
+      .then(function(email) {
+        context.setState({email: email})
+        context.getHouseId(context.state.email);
+      });
+  },
 
-
-  //WORKING INTERACTION WITH THE DATABASE, NOTE HOW TO
-  //HANDLE PROMISE OBJECT BELOW 
-  getUsers: function() {
-    //verified that this was triggered on comp mount
-    fetch('http://localhost:8080/users/', {
+  getHouseId: function(email) {
+  var context = this;
+    fetch('http://localhost:8080/api/mobile/users/' + email, {
       method: 'GET',
       headers: {
-        //at some point will need to set token on AsynchSt.
-        //which acts just as local storage did. Async Storage
-        //is promisified, but don't think we need here b/c 
-        //we're only retrieving the value
         'Accept': 'application/json',
         'Content-Type': 'application/json'
-        //'token': AsyncStorage.getItem('obie')
       }
     })
     .then(function(response) {
-      response.json().then(function(data) { 
-        //data is an array of four users
-        this.setState({users: data}); 
-      });
-      //update state users array with response
-      // console.log('USERS FROM DB', response.status);
-    })
-    .catch(function() {
-      console.log('nope');
+        response.json().then(function(data) {
+        context.setState({houseId: data[0].HouseId, userId: data[0].id})
+        context.loadChores(context.state.houseId);
+        context.getUsers(context.state.houseId);
+      })
     })
   },
 
-  loadChores: function() {
-    var context = this; 
-    //verified that this was triggered on comp mount 
-    fetch('http://localhost:8080/chores/', {
+  // WORKING INTERACTION WITH THE DATABASE, NOTE HOW TO
+  // HANDLE PROMISE OBJECT BELOW
+
+  loadChores: function(houseId) {
+    var context = this;
+    //verified that this was triggered on comp mount
+    fetch('http://localhost:8080/api/mobile/chores/' + houseId, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        //'token': AsyncStorage.getItem('obie')
       }
     })
     .then(function(response) {
-        response.json().then(function(data) { 
-        //data is an array of four users
-        context.setState({chores: data}); 
+        response.json().then(function(data) {
+        context.setState({chores: data});
       });
     })
     .catch(function() {
-      console.log('too bad');
+      console.log('loadChores too bad');
     })
   },
 
-
-
-  componentDidMount: function() {
-    //sets choreContainer state to be live users load
-    //this.getUsers();
-    //loads all chores currently in the database 
-    this.loadChores();
-    var that = this;
+    getUsers: function(houseId) {
+    var context = this;
+    fetch('http://localhost:8080/api/mobile/users/' + houseId, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    })
+    .then(function(response) {
+      console.log('getUsers response', response)
+      response.json()
+    .then(function(responseData) {
+       console.log('json here?', responseData)
+        context.setState({users: responseData});
+      });
+    })
+     .catch(function() {
+      console.log('getUsers too bad');
+    })
   },
 
   //used only to update chore dummy data locally
   //REMOVE WHEN DB CONNECTION HOOKED UP
-  sendChore: function(choreObj) {
-    this.state.chores.push(choreObj);
-    this.setState({
-      dataSource: this.state.dataSource.cloneWithRows(this.state.chores),
-      chores: this.state.chores
-    })
-    this.toggleForm(); 
-    this.setState({showAddButton: true});
-  },
+  // sendChore: function(choreObj) {
+  //   this.state.chores.push(choreObj);
+  //   this.setState({
+  //     dataSource: this.state.dataSource.cloneWithRows(this.state.chores),
+  //     chores: this.state.chores
+  //   })
+  //   this.toggleForm();
+  //   this.setState({showAddButton: true});
+  // },
 
   toggleForm: function() {
-    this.toggleAddButton(); 
+    this.toggleAddButton();
     this.setState({showForm: !this.state.showForm});
   },
 
   renderForm: function() {
     if(this.state.showForm) {
-      return <ChoreForm users={this.state.users} sendChore={this.sendChore}/>
+      return <ChoreForm users={this.state.users} sendChore={this.submitChore}/>
     }
   },
 
@@ -1027,7 +1000,7 @@ var ChoreContainer = React.createClass({
     if(this.state.showAddButton) {
       return (
         <View style={{alignItems: 'center', paddingBottom: 25, paddingTop: 10}} >
-          <TouchableHighlight 
+          <TouchableHighlight
             onPress={this.toggleForm}
             style={[styles.setDateButton]}>
             <Text style={{color: 'white'}}>Add Chore</Text>
@@ -1039,7 +1012,8 @@ var ChoreContainer = React.createClass({
 
   submitChore: function(chore) {
     //verified, receiving correct choreobj and arriving here properly
-    fetch('http://localhost:8080/chores', {
+    console.log("inside submit chore", chore);
+    fetch('http://localhost:8080/api/mobile/chores', {
       method: 'POST',
       headers: {
         'Accept': 'application/json',
@@ -1049,7 +1023,6 @@ var ChoreContainer = React.createClass({
       body: JSON.stringify(chore)
     })
     .then(function(data) {
-      this.loadChores();
       //socket.emit('chore', chore);
     })
   },
@@ -1059,7 +1032,7 @@ var ChoreContainer = React.createClass({
     //need to get the right chore id to pass in, may not be props
     //we want to call this when an item in the chore list is completed
     //big issue is understanding listview better and being able to access
-    //proper chore. 
+    //proper chore.
     fetch('http://localhost:8080/chores/' + this.props.chore.id, {
       method: 'PUT',
       headers: {
@@ -1075,7 +1048,7 @@ var ChoreContainer = React.createClass({
   },
 
   render: function() {
-    var context = this; 
+    var context = this;
     var choreList = this.state.chores.map(function(chore) {
       return (
         <View key={chore} style={[styles.choreEntry]}>
@@ -1092,7 +1065,7 @@ var ChoreContainer = React.createClass({
           </View>
           <View style={[styles.doneButtonCont]}>
             <View style={[styles.doneButton]}>
-              <Text 
+              <Text
               style={{color: 'white'}}
               onPress={context.updateChoreStatus}>
                 Done?
@@ -1123,7 +1096,6 @@ var Login = React.createClass({
   },
 
   navToApp: function() {
-    console.log('in nav to app');
     AsyncStorage.setItem('email', this.state.email);
     //AsyncStorage.setItem('password', this.state.password);
     this.props.navigator.push({
@@ -1142,7 +1114,7 @@ var Login = React.createClass({
           </View>
           <View style={{marginTop: 10}}>
             <Text style={{justifyContent: 'center', marginBottom: 7}}>Email: </Text>
-            <TextInput 
+            <TextInput
             autoCapitalize='none'
             onChangeText={(email) => this.setState({email})}
             style={[styles.textInput]} />
@@ -1404,7 +1376,7 @@ var CreateBill = React.createClass({
   },
 
   // sendBillButton: function() {
-  //   return <TouchableHighlight 
+  //   return <TouchableHighlight
   //   underlayColor='gray'
   //   onPress={this.addBill}><Text>Submit Bill</Text>
   //   </TouchableHighlight>
@@ -1446,7 +1418,7 @@ var CreateBill = React.createClass({
     return (
       <View style={{padding: 15, flexDirection: 'row', flex: 1, alignItems: 'center', justifyContent: 'center'}}>
         <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
-          <Text 
+          <Text
           style={{fontSize: 18}}>Total:</Text>
         </View>
         <View style={{flex: 6}}>
@@ -1471,7 +1443,7 @@ var CreateBill = React.createClass({
   renderDateInput: function(){
     return (
       <View style={{alignItems: 'center'}} >
-        <TouchableHighlight 
+        <TouchableHighlight
           onPress={this.toggleDate}
           style={[styles.billDateButton]}>
           <Text style={{color: 'white'}}>Set Due Date</Text>
@@ -1483,7 +1455,7 @@ var CreateBill = React.createClass({
   renderSplitEvenlyButton: function(){
     return (
       <View style={{alignItems: 'center', paddingBottom: 25, paddingTop: 10}} >
-        <TouchableHighlight 
+        <TouchableHighlight
           onPress={this.addBill}
           style={[styles.setDateButton]}>
           <Text style={{color: 'white'}}>Split Evenly</Text>
@@ -1495,7 +1467,7 @@ var CreateBill = React.createClass({
   renderCustomSplitButton: function() {
     return (
       <View style={{alignItems: 'center', paddingBottom: 25, paddingTop: 10}} >
-        <TouchableHighlight 
+        <TouchableHighlight
           onPress={this.toggleCustomSplit}
           style={[styles.setDateButton]}>
           <Text style={{color: 'white'}}>Custom Split</Text>
@@ -1566,10 +1538,10 @@ var CustomSplitContainer = React.createClass({
   },
 
   render: function() {
-  var context = this; 
+  var context = this;
   var userlist = users.map(function(user) {
     return (
-      
+
         <View style={{padding: 15, flexDirection: 'row', flex: 1, alignItems: 'center', justifyContent: 'center'}}>
           <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}}>
             <Text style={{fontSize: 18}}>{user}:</Text>
@@ -1585,12 +1557,12 @@ var CustomSplitContainer = React.createClass({
   });
     return (
       <View>
-        <ScrollView style={{height: 175}}> 
+        <ScrollView style={{height: 175}}>
           <View style={{padding: 1}}>{userlist}</View>
         </ScrollView>
         <View style={{flexDirection: 'row', paddingTop: 20}}>
           <View style={{flex: 1, alignItems: 'center', justifyContent: 'center'}} >
-            <TouchableHighlight 
+            <TouchableHighlight
               onPress={this.props.addBillandClose}
               style={[styles.setDateButton]}>
               <Text style={{color: 'white'}}>Submit</Text>
@@ -1603,7 +1575,7 @@ var CustomSplitContainer = React.createClass({
         {this.renderKeyboard()}
       </View>
 
-      
+
     )
   }
 })
