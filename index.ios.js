@@ -120,7 +120,7 @@ var App = React.createClass({
     return {
       //eventually should all be replaced by empty arrs,
       //they will be overwritten by fetch calls 
-      chores: chores,
+      chores: [],
       users: users,
       messages: [],
       bills: [],
@@ -194,6 +194,26 @@ loadPayments: function(userId) {
   })
 },
 
+loadChores: function(houseId) {
+    var context = this;
+    //verified that this was triggered on comp mount
+    fetch('http://localhost:8080/api/mobile/chores/' + houseId, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json',
+      }
+    })
+    .then(function(response) {
+        response.json().then(function(data) {
+          context.setState({chores: data});
+      });
+    })
+    .catch(function() {
+      console.log('loadChores too bad');
+    })
+  },
+
   getHouseId: function(email) {
     var context = this; 
     fetch('http://localhost:8080/api/mobile/users/' + email, {
@@ -209,6 +229,7 @@ loadPayments: function(userId) {
         context.loadMessages(context.state.houseId); 
         context.loadBills(context.state.userId);
         context.loadPayments(context.state.userId);
+        context.loadChores(context.state.houseId)
         context.getUsers(context.state.houseId);
       })
     })
@@ -337,7 +358,7 @@ loadPayments: function(userId) {
         <ScrollableTabView>
           <MessageContainer loadMessages={this.loadMessages} messages={this.state.messages} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Messages"/>
           <FinanceContainer loadBills={this.loadBills} payments={this.state.paymentsOwed} bills={this.state.bills} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Finance"/>
-          <ChoreContainer email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Chores" />
+          <ChoreContainer loadChores={this.loadChores} chores={this.state.chores} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Chores" />
         </ScrollableTabView>
       </View>
     )
@@ -1089,11 +1110,8 @@ var ChoreContainer = React.createClass({
 
 
   componentDidMount: function() {
-    //sets choreContainer state to be live users load
-    //this.getUsers();
-    //loads all chores currently in the database 
-    this.loadChores();
-    var that = this;
+    var context = this; 
+    socket.on('chore', function() {context.props.loadChores(context.props.houseId)})
   },
 
   //used only to update chore dummy data locally
@@ -1176,18 +1194,19 @@ var ChoreContainer = React.createClass({
 
   render: function() {
     var context = this; 
-    var choreList = this.state.chores.map(function(chore) {
+    var choreList = this.props.chores.map(function(chore) {
+      console.log('CURRENT CHORE', chore)
       return (
-        <View key={chore} style={[styles.choreEntry]}>
+        <View key={chore.id} style={[styles.choreEntry]}>
           <View style={[styles.choreData]}>
             <Text style={{fontStyle: 'italic', fontWeight: 'bold'}}>
-              {chore.userId} ~ {chore.category}
+              {chore.chorename} ~ {chore.category}
             </Text>
             <Text>
               {chore.name}
             </Text>
             <Text>
-              Complete by: {chore.dueDate}
+              Complete by: {chore.dueDate.slice(0,10)}
             </Text>
           </View>
           <View style={[styles.doneButtonCont]}>
@@ -1323,10 +1342,9 @@ var BillContainer = React.createClass({
 
   render: function() {
     var billList = this.props.bills.map(function(bill) {
-      console.log('BILL', bill)
       var dueDate = bill.dueDate.toString().split(' ').slice(0, 4).join(' ')
       return (
-        <View key={Math.random()} style={[styles.choreEntry]}>
+        <View key={bill.id} style={[styles.choreEntry]}>
           <View style={[styles.choreData]}>
             <Text style={{padding: 2, fontWeight: 'bold'}}>
               Due {bill.dueDate.slice(0, 10)}
@@ -1384,7 +1402,7 @@ var PaymentContainer = React.createClass({
   render: function(){
     var paymentList = this.props.payments.map(function(payment) {
       return (  
-        <View key={Math.random()} style={[styles.messageEntry]}>
+        <View key={payment.id} style={[styles.messageEntry]}>
           <Text style={{padding: 2, fontWeight: 'bold'}}>
             {payment.ower} owes you ${payment.amount} for {payment.billName}
           </Text>
