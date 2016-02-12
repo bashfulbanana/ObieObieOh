@@ -25,6 +25,8 @@ import React, {
 // import Modal from 'react-native-modal';
 //import io from 'socket.io'
 
+//window.navigator.userAgent = 'react-native';
+
 import DropDown, {
   Select,
   Option,
@@ -36,6 +38,12 @@ import DropDown, {
 import {createStore} from 'redux';
 
 ////////////////// DUMMY GLOBAL VARS //////////////////////////
+
+window.navigator.userAgent = "react-native";
+
+var io = require('socket.io-client/socket.io');
+var socket = io('http://obie.herokuapp.com', {jsonp: false});
+
 
 var ScrollableTabView = require('react-native-scrollable-tab-view');
 
@@ -158,7 +166,6 @@ var App = React.createClass({
       }
     })
     .then(function(response) {
-      console.log('BILL RESP', response)
       response.json().then(function(data) {
         //console.log('RECEIVED THE DAAT', data)
         context.setState({bills: data})
@@ -202,6 +209,7 @@ loadPayments: function(userId) {
         context.loadMessages(context.state.houseId); 
         context.loadBills(context.state.userId);
         context.loadPayments(context.state.userId);
+        context.getUsers(context.state.houseId);
       })
     })
   },
@@ -217,18 +225,23 @@ loadPayments: function(userId) {
       });
   },
 
-  getUsers: function() {
-    fetch(process.env.Base_URL + '/', {
+  getUsers: function(houseId) {
+    console.log('HOUSE ID', houseId)
+    fetch('http://localhost:8080/api/mobile/users/' + houseId, {
       method: 'GET',
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
-        'token': AsyncStorage.getItem('obie')
+        //'token': AsyncStorage.getItem('obie')
       }
     })
-    .then(function(users) {
+    .then(function(response) {
+      console.log('USERS COMING BACK', response)
       //update state users array with response
-      this.setState({users: users});
+      //this.setState({users: users});
+    })
+    .catch(function(err) {
+      console.log(err);
     })
   },
 
@@ -323,7 +336,7 @@ loadPayments: function(userId) {
         <MessageContainer messages={this.state.messages} />*/}
         <ScrollableTabView>
           <MessageContainer loadMessages={this.loadMessages} messages={this.state.messages} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Messages"/>
-          <FinanceContainer payments={this.state.paymentsOwed} bills={this.state.bills} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Finance"/>
+          <FinanceContainer loadBills={this.loadBills} payments={this.state.paymentsOwed} bills={this.state.bills} email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Finance"/>
           <ChoreContainer email={this.state.email} userId={this.state.userId} houseId={this.state.houseId} tabLabel="Chores" />
         </ScrollableTabView>
       </View>
@@ -389,6 +402,12 @@ var MessageContainer = React.createClass({
     };
   },
 
+  componentDidMount: function() {
+    var context = this;
+    // setInterval(function() {context.props.loadMessages(context.props.houseId)}, 500);
+    socket.on('message', function() {context.props.loadMessages(context.props.houseId)});
+  },
+
   // componentDidMount: function () {
   //   this.setState({messages: this.props.messages})
   //   //this.loadMessages(this.props.houseId)
@@ -433,6 +452,7 @@ var MessageContainer = React.createClass({
       body: JSON.stringify(message)
     })
     .then(function() {
+      socket.emit('message', {})
       context.props.loadMessages(context.props.houseId);
     })
   },
@@ -470,7 +490,6 @@ var MessageContainer = React.createClass({
   },
 
   render: function() {
-    console.log('MESSAGE PROPS', this.props)
     var messageList = this.props.messages.map(function(message) {
       return (
         <View style={[styles.messageEntry]}>
@@ -630,15 +649,20 @@ var DatePickerExample = React.createClass({
 
   
   onDateChange: function(date) {
-    this.setState({date: date});
-    gDate = this.state.date;  
+    this.setState({date: date}); 
   },
+
   onTimezoneChange: function(event) {
     var offset = parseInt(event.nativeEvent.text, 10);
     if (isNaN(offset)) {
       return;
     }
     this.setState({timeZoneOffsetInHours: offset});
+  },
+
+  updateDate: function(date) {
+    this.setState({date: date}); 
+    this.props.setBillDate(this.state.date); 
   },
 
   render: function() {
@@ -649,7 +673,7 @@ var DatePickerExample = React.createClass({
             date={this.state.date}
             mode="datetime"
             timeZoneOffsetInMinutes={this.state.timeZoneOffsetInHours * 60}
-            onDateChange={this.onDateChange}
+            onDateChange={this.updateDate}
             minuteInterval={30}
             style={[{height: 500}]}
           />
@@ -1267,6 +1291,12 @@ var BillContainer = React.createClass({
     }
   },
 
+  componentDidMount: function() {
+    var context = this;
+    // setInterval(function() {context.props.loadMessages(context.props.houseId)}, 500);
+    socket.on('bill', function() {context.props.loadBills(context.props.userId)})
+  },
+
   renderBillEntry: function(rowData){
     return (
       <View style={[styles.choreEntry]}>
@@ -1435,7 +1465,7 @@ var FinanceContainer = React.createClass({
  renderBills: function() {
   if(this.state.showBills) {
     return (
-    <BillContainer bills={this.props.bills}/>
+    <BillContainer loadBills={this.props.loadBills} userId={this.props.userId} bills={this.props.bills}/>
     )
   }
  },
@@ -1486,13 +1516,17 @@ var CreateBill = React.createClass({
     }
   },
 
+  setBillDate: function(billDate) {
+    this.setState({billDate: billDate});
+  },
+
   toggleDate: function() {
     this.setState({showDate: !this.state.showDate})
   },
 
   renderDate: function() {
     if(this.state.showDate) {
-      return <DatePickerExample billDate={this.state.billDate} toggleClose={this.toggleClose}/>
+      return <DatePickerExample setBillDate={this.setBillDate} toggleClose={this.toggleClose}/>
     }
   },
 
@@ -1624,6 +1658,7 @@ var CreateBill = React.createClass({
   },
 
   render: function() {
+    console.log('SET BILL DATE', this.state.billDate);
     return (
       <View>
         <View style={{paddingTop: 10}}>{this.renderDate()}</View>
